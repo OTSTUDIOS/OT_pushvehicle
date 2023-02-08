@@ -1,4 +1,25 @@
+local AttachEntityToEntity = AttachEntityToEntity
+local GetEntityCoords = GetEntityCoords
+local GetEntityModel = GetEntityModel
+local GetVehicleEngineHealth = GetVehicleEngineHealth
+local GetModelDimensions = GetModelDimensions
+local GetOffsetFromEntityInWorldCoords = GetOffsetFromEntityInWorldCoords
+local GetControlInstructionalButton = GetControlInstructionalButton
+local NetworkGetEntityOwner = NetworkGetEntityOwner
+local NetworkGetEntityFromNetworkId = NetworkGetEntityFromNetworkId
+local NetworkGetNetworkIdFromEntity = NetworkGetNetworkIdFromEntity
+local SetVehicleForwardSpeed = SetVehicleForwardSpeed
+local SetVehicleEngineOn = SetVehicleEngineOn
+local SetVehicleBrake = SetVehicleBrake
+local SetVehicleSteeringAngle = SetVehicleSteeringAngle
+local DisableControlAction = DisableControlAction
+local IsDisabledControlPressed = IsDisabledControlPressed
+local TaskVehicleTempAction = TaskVehicleTempAction
+local TaskPlayAnim = TaskPlayAnim
+local IsEntityUpsidedown = IsEntityUpsidedown
 local ped = cache.ped
+local playerId = cache.playerId
+local seat = cache.seat
 local pushing, remotepush = false, false
 local vehiclepushing, keybind = nil, nil
 local uiThreadRunning = false
@@ -36,19 +57,22 @@ if Config.TextUI then
                         else
                             local health = GetVehicleEngineHealth(vehicle) <= Config.healthMin and true or false
                             if health then
-                                local min, max = GetModelDimensions(model)
-                                local size = max - min
-                                local bonnet = #(coords - GetOffsetFromEntityInWorldCoords(vehicle, 0.0, (size.y / 2), 0.0)) < 1.45 and true or false
-                                local trunk = #(coords - GetOffsetFromEntityInWorldCoords(vehicle, 0.0, (-size.y / 2), 0.0)) < 1.45 and true or false
-                                if trunk or bonnet then
-                                    if not uiOpen then
-                                        lib.showTextUI(string.format('Hold [%s] to push vehicle', GetControlInstructionalButton(0, joaat('+' .. keybind.name) | 0x80000000, true):sub(3)))
-                                        uiOpen = true
-                                    end
-                                else
-                                    if uiOpen then
-                                        lib.hideTextUI()
-                                        uiOpen = false
+                                local flipped = IsEntityUpsidedown(vehicle) and true or false
+                                if not flipped then
+                                    local min, max = GetModelDimensions(model)
+                                    local size = max - min
+                                    local bonnet = #(coords - GetOffsetFromEntityInWorldCoords(vehicle, 0.0, (size.y / 2), 0.0)) < 1.45 and true or false
+                                    local trunk = #(coords - GetOffsetFromEntityInWorldCoords(vehicle, 0.0, (-size.y / 2), 0.0)) < 1.45 and true or false
+                                    if trunk or bonnet then
+                                        if not uiOpen then
+                                            lib.showTextUI(string.format('Hold [%s] to push vehicle', GetControlInstructionalButton(0, joaat('+' .. keybind.name) | 0x80000000, true):sub(3)))
+                                            uiOpen = true
+                                        end
+                                    else
+                                        if uiOpen then
+                                            lib.hideTextUI()
+                                            uiOpen = false
+                                        end
                                     end
                                 end
                             end
@@ -63,39 +87,8 @@ if Config.TextUI then
             end
         end
         CreateThread(uiThread)
-    
-        lib.onCache('vehicle', function(value)
-            if value then
-                uiThreadRunning = false
-            else
-                CreateThread(uiThread)
-            end
-        end)
     end
 end
-
-lib.onCache('ped', function(value)
-    ped = value
-end)
-
-local function startMove(netid, direction)
-    local vehicle = NetworkGetEntityFromNetworkId(netid)
-    remotepush = true
-    while remotepush do
-        Wait(5)
-        SetVehicleForwardSpeed(vehicle, direction == 'trunk' and 1.0 or -1.0)
-        if NetworkGetEntityOwner(vehicle) ~= cache.playerId then
-            remotepush = false
-            return TriggerServerEvent('OT_pushvehicle:updateOwner', netid, direction)
-        end
-    end
-end
-RegisterNetEvent('OT_pushvehicle:startMove', startMove)
-
-local function stopMove()
-    remotepush = false
-end
-RegisterNetEvent('OT_pushvehicle:stopMove', stopMove)
 
 local function startTurn(netid, direction)
     if direction ~= 'left' and direction ~= 'right' then return end
@@ -110,7 +103,42 @@ local function stopTurn(netid)
 end
 RegisterNetEvent('OT_pushvehicle:stopTurn', stopTurn)
 
+local function startMove(netid, direction)
+    local vehicle = NetworkGetEntityFromNetworkId(netid)
+    remotepush = true
+    while remotepush do
+        Wait(0)
+        SetVehicleEngineOn(vehicle, false, true, true)
+        SetVehicleBrake(vehicle, false)
+        SetVehicleForwardSpeed(vehicle, direction == 'trunk' and 1.1 or -1.1)
+        local owner = NetworkGetEntityOwner(vehicle)
+        if owner ~= playerId then
+            remotepush = false
+            return TriggerServerEvent('OT_pushvehicle:updateOwner', netid, direction)
+        end
+        if owner == playerId and seat == -1 then
+            DisableControlAction(0, 34, true)
+            DisableControlAction(0, 35, true)
+            if IsDisabledControlPressed(0, 34) then
+                TaskVehicleTempAction(ped, vehicle, 11, 1000)
+            elseif IsDisabledControlPressed(0, 35) then
+                TaskVehicleTempAction(ped, vehicle, 10, 1000)
+            end
+        end
+    end
+end
+RegisterNetEvent('OT_pushvehicle:startMove', startMove)
+
+local function stopMove()
+    remotepush = false
+end
+RegisterNetEvent('OT_pushvehicle:stopMove', stopMove)
+
 local function startPushing(vehicle)
+    local health = GetVehicleEngineHealth(vehicle) <= Config.healthMin and true or false
+    if not health then return end
+    local flipped = IsEntityUpsidedown(vehicle) and true or false
+    if flipped then return end
     local min, max = GetModelDimensions(GetEntityModel(vehicle))
     local size = max - min
     local coords = GetEntityCoords(cache.ped)
@@ -248,3 +276,20 @@ if Config.target then
 		end
 	end
 end
+
+lib.onCache('ped', function(value)
+    ped = value
+end)
+
+lib.onCache('vehicle', function(value)
+    if Config.target or not Config.TextUI then return end
+    if value then
+        uiThreadRunning = false
+    else
+        CreateThread(uiThread)
+    end
+end)
+
+lib.onCache('seat', function(value)
+    seat = value
+end)
