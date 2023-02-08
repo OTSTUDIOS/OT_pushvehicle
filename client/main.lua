@@ -87,6 +87,14 @@ if Config.TextUI then
             end
         end
         CreateThread(uiThread)
+
+        lib.onCache('vehicle', function(value)
+            if value then
+                uiThreadRunning = false
+            else
+                CreateThread(uiThread)
+            end
+        end)
     end
 end
 
@@ -141,15 +149,15 @@ local function startPushing(vehicle)
     if flipped then return end
     local min, max = GetModelDimensions(GetEntityModel(vehicle))
     local size = max - min
-    local coords = GetEntityCoords(cache.ped)
+    local coords = GetEntityCoords(ped)
     local closest = #(coords - GetOffsetFromEntityInWorldCoords(vehicle, 0.0, (size.y / 2), 0.0)) < #(coords - GetOffsetFromEntityInWorldCoords(vehicle, 0.0, (-size.y / 2), 0.0)) and 'bonnet' or 'trunk'
     local start = lib.callback.await('OT_pushvehicle:startPushing', false, NetworkGetNetworkIdFromEntity(vehicle), closest)
     if start then
         vehiclepushing = vehicle
         pushing = true
-        AttachEntityToEntity(cache.ped, vehicle, 0, 0.0, closest == 'trunk' and min.y - 0.6 or -min.y + 0.4, closest == 'trunk' and min.z + 1.1 or max.z / 2, 0.0, 0.0, closest == 'trunk' and 0.0 or 180.0, 0.0, false, false, true, 0, true)
+        AttachEntityToEntity(ped, vehicle, 0, 0.0, closest == 'trunk' and min.y - 0.6 or -min.y + 0.4, closest == 'trunk' and min.z + 1.1 or max.z / 2, 0.0, 0.0, closest == 'trunk' and 0.0 or 180.0, 0.0, false, false, true, 0, true)
         lib.requestAnimDict('missfinale_c2ig_11')
-        TaskPlayAnim(cache.ped, 'missfinale_c2ig_11', 'pushcar_offcliff_m', 1.5, 1.5, -1, 35, 0, false, false, false)
+        TaskPlayAnim(ped, 'missfinale_c2ig_11', 'pushcar_offcliff_m', 1.5, 1.5, -1, 35, 0, false, false, false)
     end
 end
 
@@ -157,18 +165,18 @@ local function stopPushing()
     TriggerServerEvent('OT_pushvehicle:stopPushing', NetworkGetNetworkIdFromEntity(vehiclepushing))
     vehiclepushing = nil
     pushing = false
-    DetachEntity(cache.ped, true, false)
-    ClearPedTasks(cache.ped)
+    DetachEntity(ped, true, false)
+    ClearPedTasks(ped)
 end
 
 keybind = lib.addKeybind({
     name = 'pushvehicle',
     description = 'Push broken down vehicle',
-    defaultKey = 'E',
+    defaultKey = Config.PushKey,
     onPressed = function(self)
         if Config.target then return end
         if pushing then return end
-        local vehicle = lib.getClosestVehicle(GetEntityCoords(cache.ped), 4, false)
+        local vehicle = lib.getClosestVehicle(GetEntityCoords(ped), 4, false)
         if not vehicle then return end
         startPushing(vehicle)
     end,
@@ -211,7 +219,6 @@ if Config.target then
 	local options = {
 		{
 			name = 'startPushing',
-			icon = Config.Intrunkicon,
 			label = 'Start Pushing',
 			onSelect = function(data)
 				startPushing(data.entity)
@@ -230,7 +237,6 @@ if Config.target then
 		},
         {
 			name = 'stopPushing',
-			icon = Config.Intrunkicon,
 			label = 'Stop Pushing',
 			onSelect = function(data)
 				stopPushing()
@@ -249,12 +255,12 @@ if Config.target then
 		if Config.Usebones then
 			exports[targetSystem]:AddTargetBone({'boot', 'bonnet'}, {
 				options = options,
-				distance = Config.MaxDistance
+				distance = 3
 			})
 		else
 			exports[targetSystem]:Vehicle({
 				options = options,
-				distance = Config.MaxDistance
+				distance = 3
 			})
 		end
 	elseif targetSystem == 'ox_target' then
@@ -270,12 +276,12 @@ if Config.target then
 		if Config.Usebones then
 			exports[targetSystem]:AddTargetBone({'boot', 'bonnet'}, {
 				options = options,
-				distance = Config.MaxDistance
+				distance = 3
 			})
 		else
 			exports[targetSystem]:AddGlobalVehicle({
 				options = options,
-				distance = Config.MaxDistance
+				distance = 3
 			})
 		end
 	end
@@ -283,15 +289,6 @@ end
 
 lib.onCache('ped', function(value)
     ped = value
-end)
-
-lib.onCache('vehicle', function(value)
-    if Config.target or not Config.TextUI then return end
-    if value then
-        uiThreadRunning = false
-    else
-        CreateThread(uiThread)
-    end
 end)
 
 lib.onCache('seat', function(value)
