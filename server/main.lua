@@ -50,3 +50,9 @@ RegisterNetEvent('OT_pushvehicle:updateOwner', function(netid, direction)
     if not pushing[beingpushed[netid]] then return end
     TriggerClientEvent('OT_pushvehicle:startMove', owner, netid, direction)
 end)
+
+RegisterNetEvent('OT_pushvehicle:detach', function(netid)
+    if not beingpushed[netid] then return end
+    if not pushing[beingpushed[netid]] then return end
+    TriggerClientEvent('OT_pushvehicle:detach', beingpushed[netid])
+end)

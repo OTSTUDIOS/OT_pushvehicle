@@ -133,6 +133,10 @@ local function startMove(netid, direction)
                 TaskVehicleTempAction(ped, vehicle, 10, 1000)
             end
         end
+        if IsEntityInAir(vehicle) then
+            remotepush = false
+            return TriggerServerEvent('OT_pushvehicle:detach', netid)
+        end
     end
 end
 RegisterNetEvent('OT_pushvehicle:startMove', startMove)
@@ -168,6 +172,7 @@ local function stopPushing()
     DetachEntity(ped, true, false)
     ClearPedTasks(ped)
 end
+RegisterNetEvent('OT_pushvehicle:detach', stopPushing)
 
 keybind = lib.addKeybind({
     name = 'pushvehicle',
