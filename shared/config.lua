@@ -1,7 +1,7 @@
 Config = {}
 
 Config.target = false -- Use target system for vehicle push (disables TextUI)
-Config.targetSystem = 'ox_target' -- Target System to use. ox_target, ox_target2
+Config.targetSystem = 'ox_target' -- Target System to use. ox_target, qtarget, qb-target
 Config.Usebones = true -- Use bones for vehicle push
 Config.PushKey = 'E' -- Key to push vehicle
 Config.TurnRightKey = 'D' -- Keys to turn the vehicle while pushing it.

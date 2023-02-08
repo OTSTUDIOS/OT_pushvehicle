@@ -221,6 +221,10 @@ if Config.target then
 			end,
 			canInteract = function(entity)
                 if pushing then return false end
+                local health = GetVehicleEngineHealth(entity) <= Config.healthMin and true or false
+                if not health then return false end
+                local flipped = IsEntityUpsidedown(entity) and true or false
+                if flipped then return false end
 				return true
 			end
 		},
