@@ -17,6 +17,8 @@ local IsDisabledControlPressed = IsDisabledControlPressed
 local TaskVehicleTempAction = TaskVehicleTempAction
 local TaskPlayAnim = TaskPlayAnim
 local IsEntityUpsidedown = IsEntityUpsidedown
+local IsEntityAttachedToAnyVehicle = IsEntityAttachedToAnyVehicle
+local IsEntityInAir = IsEntityInAir
 local ped = cache.ped
 local playerId = cache.playerId
 local seat = cache.seat
@@ -111,19 +113,24 @@ local function stopTurn(netid)
 end
 RegisterNetEvent('OT_pushvehicle:stopTurn', stopTurn)
 
-local function startMove(netid, direction)
+local function startMove(netid, direction, pedid)
     local vehicle = NetworkGetEntityFromNetworkId(netid)
+    local remoteped = NetworkGetEntityFromNetworkId(pedid)
     remotepush = true
     while remotepush do
         Wait(0)
-        SetVehicleEngineOn(vehicle, false, true, true)
-        SetVehicleBrake(vehicle, false)
-        SetVehicleForwardSpeed(vehicle, direction == 'trunk' and 1.1 or -1.1)
+        if IsEntityInAir(vehicle) or IsEntityUpsidedown(vehicle) or IsEntityAttachedToAnyVehicle(remoteped) == false then
+            remotepush = false
+            return TriggerServerEvent('OT_pushvehicle:detach', netid)
+        end
         local owner = NetworkGetEntityOwner(vehicle)
         if owner ~= playerId then
             remotepush = false
             return TriggerServerEvent('OT_pushvehicle:updateOwner', netid, direction)
         end
+        SetVehicleEngineOn(vehicle, false, true, true)
+        SetVehicleBrake(vehicle, false)
+        SetVehicleForwardSpeed(vehicle, direction == 'trunk' and 1.1 or -1.1)
         if owner == playerId and seat == -1 then
             DisableControlAction(0, 34, true)
             DisableControlAction(0, 35, true)
@@ -132,10 +139,6 @@ local function startMove(netid, direction)
             elseif IsDisabledControlPressed(0, 35) then
                 TaskVehicleTempAction(ped, vehicle, 10, 1000)
             end
-        end
-        if IsEntityInAir(vehicle) then
-            remotepush = false
-            return TriggerServerEvent('OT_pushvehicle:detach', netid)
         end
     end
 end
@@ -154,8 +157,8 @@ local function startPushing(vehicle)
     local min, max = GetModelDimensions(GetEntityModel(vehicle))
     local size = max - min
     local coords = GetEntityCoords(ped)
-    local closest = #(coords - GetOffsetFromEntityInWorldCoords(vehicle, 0.0, (size.y / 2), 0.0)) < #(coords - GetOffsetFromEntityInWorldCoords(vehicle, 0.0, (-size.y / 2), 0.0)) and 'bonnet' or 'trunk'
-    local start = lib.callback.await('OT_pushvehicle:startPushing', false, NetworkGetNetworkIdFromEntity(vehicle), closest)
+    local closest = #(coords - GetOffsetFromEntityInWorldCoords(vehicle, 0.0, (size.y / 2), 0.0)) < #(coords - GetOffsetFromEntityInWorldCoords(vehicle, 0.0, (-size.y / 2), 0.0)) and 'bonnet' or #(coords - GetOffsetFromEntityInWorldCoords(vehicle, 0.0, (size.y / 2), 0.0)) > #(coords - GetOffsetFromEntityInWorldCoords(vehicle, 0.0, (-size.y / 2), 0.0)) and 'trunk'
+    local start = lib.callback.await('OT_pushvehicle:startPushing', 500, NetworkGetNetworkIdFromEntity(vehicle), closest)
     if start then
         vehiclepushing = vehicle
         pushing = true
@@ -182,7 +185,7 @@ keybind = lib.addKeybind({
         if Config.target then return end
         if pushing then return end
         local vehicle = lib.getClosestVehicle(GetEntityCoords(ped), 4, false)
-        if not vehicle then return end
+        if not vehicle or not NetworkGetEntityIsNetworked(vehicle) then return end
         startPushing(vehicle)
     end,
     onReleased = function(self)
