@@ -3,15 +3,15 @@ local beingpushed = {}
 local skilltrack = {}
 
 lib.callback.register('OT_pushvehicle:startPushing', function(source, netid, direction)
-    local src = source
-    if pushing[src] then return false end
+    if netid == nil or direction == nil then return end
+    if pushing[source] then return false end
     local vehicle = NetworkGetEntityFromNetworkId(netid)
     if beingpushed[netid] then return false end
     local owner = NetworkGetEntityOwner(vehicle)
-    beingpushed[netid] = src
-    pushing[src] = owner
-    if Config.useOTSkills then skilltrack[src] = os.time() end
-    TriggerClientEvent('OT_pushvehicle:startMove', owner, netid, direction)
+    beingpushed[netid] = source
+    pushing[source] = owner
+    if Config.useOTSkills then skilltrack[source] = os.time() end
+    TriggerClientEvent('OT_pushvehicle:startMove', owner, netid, direction, NetworkGetNetworkIdFromEntity(GetPlayerPed(source)))
     return true
 end)
 
