@@ -184,6 +184,7 @@ keybind = lib.addKeybind({
     onPressed = function(self)
         if Config.target then return end
         if pushing then return end
+        if cache.vehicle then return end
         local vehicle = lib.getClosestVehicle(GetEntityCoords(ped), 4, false)
         if not vehicle or not NetworkGetEntityIsNetworked(vehicle) then return end
         startPushing(vehicle)
