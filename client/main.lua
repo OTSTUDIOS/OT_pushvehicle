@@ -128,8 +128,6 @@ local function startMove(netid, direction, pedid)
             remotepush = false
             return TriggerServerEvent('OT_pushvehicle:updateOwner', netid, direction)
         end
-        SetVehicleEngineOn(vehicle, false, true, true)
-        SetVehicleBrake(vehicle, false)
         SetVehicleForwardSpeed(vehicle, direction == 'trunk' and 1.1 or -1.1)
         if owner == playerId and seat == -1 then
             DisableControlAction(0, 34, true)
