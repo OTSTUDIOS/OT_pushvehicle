@@ -119,6 +119,8 @@ local function startMove(netid, direction, pedid)
     remotepush = true
     while remotepush do
         Wait(0)
+        if GetVehicleDoorLockStatus(vehicle) > 1 then return end
+        if GetPedInVehicleSeat(vehicle, -1) > 0 then return end
         if IsEntityInAir(vehicle) or IsEntityUpsidedown(vehicle) or IsEntityAttachedToAnyVehicle(remoteped) == false then
             remotepush = false
             return TriggerServerEvent('OT_pushvehicle:detach', netid)
