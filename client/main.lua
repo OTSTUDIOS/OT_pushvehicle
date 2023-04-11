@@ -172,7 +172,7 @@ local function startPushing(vehicle)
     local closest = #(coords - GetOffsetFromEntityInWorldCoords(vehicle, 0.0, (size.y / 2), 0.0)) < #(coords - GetOffsetFromEntityInWorldCoords(vehicle, 0.0, (-size.y / 2), 0.0)) and 'bonnet' or #(coords - GetOffsetFromEntityInWorldCoords(vehicle, 0.0, (size.y / 2), 0.0)) > #(coords - GetOffsetFromEntityInWorldCoords(vehicle, 0.0, (-size.y / 2), 0.0)) and 'trunk'
     local veh = GetNetworkIdFromEntity(vehicle)
     if veh == nil then return end
-    local start = lib.callback.await('ab-pushvehicle:startPushing', 500, veh, closest)
+    local start = lib.callback.await('OT_pushvehicle:startPushing', 500, veh, closest)
     if start then
         vehiclepushing = vehicle
         pushing = true
