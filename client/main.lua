@@ -149,6 +149,18 @@ local function stopMove()
 end
 RegisterNetEvent('OT_pushvehicle:stopMove', stopMove)
 
+local function GetNetworkIdFromEntity(vehicle)
+    if not DoesEntityExist(vehicle) then
+        return nil
+    end
+
+    if not NetworkGetEntityIsNetworked(vehicle) then
+        return nil
+    end
+
+    return NetworkGetNetworkIdFromEntity(vehicle)
+end
+
 local function startPushing(vehicle)
     local health = GetVehicleEngineHealth(vehicle) <= Config.healthMin and true or false
     if not health then return end
@@ -158,7 +170,9 @@ local function startPushing(vehicle)
     local size = max - min
     local coords = GetEntityCoords(ped)
     local closest = #(coords - GetOffsetFromEntityInWorldCoords(vehicle, 0.0, (size.y / 2), 0.0)) < #(coords - GetOffsetFromEntityInWorldCoords(vehicle, 0.0, (-size.y / 2), 0.0)) and 'bonnet' or #(coords - GetOffsetFromEntityInWorldCoords(vehicle, 0.0, (size.y / 2), 0.0)) > #(coords - GetOffsetFromEntityInWorldCoords(vehicle, 0.0, (-size.y / 2), 0.0)) and 'trunk'
-    local start = lib.callback.await('OT_pushvehicle:startPushing', 500, NetworkGetNetworkIdFromEntity(vehicle), closest)
+    local veh = GetNetworkIdFromEntity(vehicle)
+    if veh == nil then return end
+    local start = lib.callback.await('OT_pushvehicle:startPushing', 500, veh, closest)
     if start then
         vehiclepushing = vehicle
         pushing = true
