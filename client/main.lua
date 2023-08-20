@@ -162,6 +162,7 @@ local function GetNetworkIdFromEntity(vehicle)
 end
 
 local function startPushing(vehicle)
+    if LocalPlayer.state.intrunk then return end
     local health = GetVehicleEngineHealth(vehicle) <= Config.healthMin and true or false
     if not health then return end
     local flipped = IsEntityUpsidedown(vehicle) and true or false
@@ -215,6 +216,7 @@ lib.addKeybind({
     defaultKey = Config.TurnLeftKey,
     onPressed = function(self)
         if not pushing then return end
+	if LocalPlayer.state.intrunk then return end
         TriggerServerEvent('OT_pushvehicle:startTurn', NetworkGetNetworkIdFromEntity(vehiclepushing), 'left')
     end,
     onReleased = function(self)
@@ -229,6 +231,7 @@ lib.addKeybind({
     defaultKey = Config.TurnRightKey,
     onPressed = function(self)
         if not pushing then return end
+	if LocalPlayer.state.intrunk then return end
         TriggerServerEvent('OT_pushvehicle:startTurn', NetworkGetNetworkIdFromEntity(vehiclepushing), 'right')
     end,
     onReleased = function(self)
@@ -249,6 +252,7 @@ if Config.target then
 				startPushing(entity)
 			end,
 			canInteract = function(entity)
+		if LocalPlayer.state.intrunk then return false end
                 if pushing then return false end
                 local health = GetVehicleEngineHealth(entity) <= Config.healthMin and true or false
                 if not health then return false end
