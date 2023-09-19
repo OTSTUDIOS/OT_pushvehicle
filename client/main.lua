@@ -244,7 +244,8 @@ if Config.target then
 	local options = {
 		{
 			name = 'startPushing',
-			label = 'Start Pushing',
+			icon = "fa-solid fa-truck-arrow-right",
+			label = 'Push Vehicle',
 			onSelect = function(data)
 				startPushing(data.entity)
 			end,
